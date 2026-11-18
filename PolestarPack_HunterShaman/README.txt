@@ -1,38 +1,37 @@
-Polestar 猎萨双人 · 上海加尔
-版本 0.2.0，适用 WoW Forever（16001）和 Polestar 0.4.1。
+Polestar 猎萨双人 · 50–60
+版本 0.3.0，适用 WoW Forever（16001）和 Polestar 0.4.1。
 
 安装
-解压到 _forever_/Interface/AddOns，让 PolestarPack_HunterShaman 和 Polestar 文件夹并列。两台电脑使用同一版本，安装后 /reload，或在角色选择界面启用插件。
+将压缩包解压到 _forever_/Interface/AddOns，使 PolestarPack_HunterShaman 和 Polestar 并列。两台电脑使用同一版本，安装后 /reload，或在角色选择界面启用。
 
 打开向导
-输入 /polestar guides，搜索「猎萨双人」，或运行 /polestar guide hunter-shaman-hyjal/main。
-升级时，Polestar 会把旧版仍打开的路线标签合并为新版路线，并根据角色当前的游戏状态找下一步。已关闭的旧标签和旧命令请改用上面的新入口。
+输入 /polestar guides，搜索「猎萨双人」，或输入 /polestar guide hunter-shaman-hyjal/50-60。
+升级后，Polestar 会把仍打开的旧版路线标签接到新向导，按各自的任务日志、已交任务、目标、声望和航点重新找下一步。已交最后一封海加尔邮件的角色可直接接续到后半程。
 
 行程
-1. 猎人和萨满分别完成本职业的前置，在斯通纳德集合去沉没的神庙。猎人已有「神庙中的绿龙」时直接跟神庙入口。萨满拿齐羽毛后交给巴斯拉。
-2. 从塔纳利斯进安戈洛，先找托尔瓦，在马绍尔营地汇齐任务，开水晶塔后沿北、东、南、西扫区。猎人随北上行程回艾萨拉交牙。接着经费伍德的木喉隧道进冬泉谷，先去出口附近已有任务的停靠，再往永望镇。
-3. 在永望镇补经验和药水，56 级后经暗语峡谷去海加尔。若走到峡谷才发现药水用尽且隐遁已消失，先回永望镇请埃文·维布鲁补领。已开海加尔航点的角色可利用航线。两人各自跟完三封邮件，交最后一封领取 18 格海加尔邮政背包和移速饰品。
+1. 猎人和萨满各备职业任务。先串莫高雷、菲拉斯、塔纳利斯及安戈洛，走北营地和水晶塔圈。棘齿城同一趟取石环、交车间并接燃料，再回玛尔冯取雕像任务。回东部王国补齐尚缺的神庙前置，斯通纳德集合。
+2. 神庙首趟完成各自职业和公共任务。莫高雷的元素吸引器可提前领取并在进本前使用，微粒跨本累计。交完并北上至费伍德、木喉和冬泉谷，从西向东办任务。55 级备隐遁药水，56 级经暗语峡谷到海加尔。按永望镇和山顶航线完成三封邮件，各自领取 18 格海加尔邮政背包。
+3. 回艾萨拉和莫高雷准备黑喉。木喉达到中立，外部增援链推进到尾王任务，再在 Ursolan 进本。随后走卡加斯、灼热峡谷、燃烧平原。门外打完派隆，回卡加斯换后续，再打黑石深渊。本轮跟进本内可做的部分，出本后再见萨尔。
+4. 过幽暗城时领取造物者平台任务，随后清瘟疫之地和海加尔。升到 59 级后准备平台。三项任务各自接取，队伍提前分好四色水晶，每个面板由一人凑齐同色 15 个。安戈洛四色任务的每人各七个另外计算。打完后可去希利苏斯补足 60。
 
-跟路线走
-进度由每个角色的任务日志、任务目标、等级、物品、声望和航点推进。副本内的走法随职业目标显示。组队、避怪及用药提示跟着相应的导航和任务停靠。选做任务可按行程处理。遇到不做的目标，可以在 Polestar 里右键跳过，之后也可复原。
+组队与日志
+首趟进本前，每人预留神庙约七格（六条公共加一条职业任务）、黑喉四格及最多两格给双熊和袋子支线、深渊约十格另加约两格给本内接取、平台三格。先交已完成的任务，日志满时把选做任务留待回访。每个角色用自己的日志和拾取数。哈卡只需一人持召唤物来启动，本人的任务仍应单独核对。若尚未解锁远古之卵，可以先做神庙的其余任务。
+如果同时持有 4293 和 4294，在费伍德与安戈洛分别拾原始软泥样本，到幽暗城各用对应的试验器检验，最后各需五个合格样本。遇到需要暂缓的目标，可用 Polestar 的右键跳过，之后按需要复原。
+暗语峡谷前缺药且隐遁已消失时，先回永望镇找埃文·维布鲁。已开山中航点时可利用现有航线。
 
-在安戈洛北坡先收各色水晶各七个，额外的可留给造物者平台。想做 A-Me 的护送，进猩猩洞前带一个秘银外壳。掉落触发的支线可直接用已拾到的任务物品开启。
+普通任务取舍
+同时持有雷霆崖的 3761 和加基森的 4496 时，每人合计留 25 份泥土。火羽山的灰烬可在第二次过安戈洛时补收，下次经过棘齿城再交。八枚白色暴掠龙爪排在实际回奥格瑞玛时交，若这趟未回城，可留到以后。
+乌查（4301）需要交完猩猩皮后再回洞穴深处。费伍德红钥匙的后续（5202、5203、5204、5385）涉及影堡深处和护送。林克交信（3908）之后的视灵药剂等步骤还要额外往返菲拉斯等地。这几条留在后续自选路线。
 
 中文和数据
-步骤与说明为简体中文。任务、NPC、物品使用固定 ID 和 Polestar 的本地化数据。少数新任务名保留英文。进山点位为路线参考，具体任务目标和航线以游戏为准。
+步骤与说明为简体中文。部分 Forever 新任务和 NPC 使用已核对的英文名。路线择取沿途可合并的普通任务和已核实的首趟副本任务。任务要求、提供者以及实际可拾取状态以游戏窗口为准。SOURCES.txt 收录从 Polestar 上游保留的数据来源与署名。
 
 参考来源
-职业目标、区域路线和坐标参考 Polestar 0.4.1 的指南及本地任务库。冬泉隐遁和邮件任务也核对了游戏任务及物品数据。
-https://polestar.guide/guides/class/hunter/the-hunters-charm
-https://polestar.guide/guides/class/shaman/spirit-totem
-https://polestar.guide/guides/horde/50-60/01-un-goro-crater
-https://polestar.guide/guides/horde/50-60/02-felwood
-https://polestar.guide/guides/horde/50-60/03-winterspring
-https://polestar.guide/guides/reputation/timbermaw-hold
+https://polestar.guide/guides/horde
 https://polestar.guide/guides/experimental/hyjal-1
-https://www.wowhead.com/forever/quest=92859/shroud-of-the-winter-wilds
-https://db.icy-veins.com/wow-forever/quests/98462
-https://zephras.com/forever/enUS/quest/93197/
-https://zephras.com/forever/enUS/quest/93406/
+https://www.wowhead.com/forever/guide/the-temple-of-atalhakkar-dungeon-overview-location-rewards
+https://www.wowhead.com/forever/quest=4293/a-sample-of-slime
+https://www.wowhead.com/forever/quest=4294/and-a-batch-of-ooze
+https://zephras.com/forever/enUS/quest/98477/
 https://zephras.com/forever/enUS/quest/93269/
-https://bindonforever.com/spell/1310655
+https://db.icy-veins.com/wow-forever/quests/zones/the-shaper-s-terrace/
