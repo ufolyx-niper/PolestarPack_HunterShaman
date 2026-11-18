@@ -13,3 +13,5 @@
 也可以从 [正式版本](https://github.com/ufolyx-niper/PolestarPack_HunterShaman/releases/latest) 下载安装包并解压到 Forever 客户端的 Interface/AddOns。需要先安装并启用 Polestar。
 
 [查看包内玩法、命令和资料说明](PolestarPack_HunterShaman/README.txt)
+
+v0.3.1 将萨满的幽暗城和亡灵壁垒行程提前，按角色日志安排第一座农场。已经收齐职业材料、已经交过前置或刚从旧版升级的角色，可以直接打开「猎萨双人」主线。新路线会重新读取任务进度，旧版手动跳过的步骤可能需要再跳一次。

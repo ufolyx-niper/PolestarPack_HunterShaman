@@ -21,19 +21,24 @@ route.addFinish()
 for i = firstLate, #route.steps do
     route.when(route.steps[i], route.handed(93269))
 end
+route.localize()
+route.prepareLiveGoals()
 
 local pack = route.pack
+local guideId = pack .. "/50-60-east"
 if not Polestar.RegisterGuide({
-    id = pack .. "/50-60", pack = pack, title = route.title, category = "Leveling",
+    id = guideId, pack = pack, title = route.title, category = "Leveling",
     faction = "Horde", classes = {"HUNTER", "SHAMAN"}, zone = route.zone.swamp,
     minLevel = 50, maxLevel = 60, version = 1,
     why = "从职业任务到 60 级。沿路准备沉没的神庙、黑喉要塞、黑石深渊和造物者平台的首趟任务。",
     keywords = {"猎萨双人", "神庙", "安戈洛", "费伍德", "冬泉谷", "海加尔邮政背包", "黑喉", "黑石深渊", "造物者平台"},
     steps = route.steps,
 }) then return end
+route.startLiveGoals(guideId)
+route.localizeInterface()
 
 -- A new ID makes the reordered route place from game state, including
 -- completed mail, without importing earlier manual skips or step numbers.
-local retired = {"start", "hunter", "shaman", "temple-prep", "temple", "ungoro", "felwood", "winterspring", "hyjal", "main"}
+local retired = {"start", "hunter", "shaman", "temple-prep", "temple", "ungoro", "felwood", "winterspring", "hyjal", "main", "50-60"}
 for i, name in ipairs(retired) do retired[i] = pack .. "/" .. name end
 Polestar.RetireGuides(pack, retired)

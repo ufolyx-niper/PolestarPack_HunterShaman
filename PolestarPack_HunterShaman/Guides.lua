@@ -3,7 +3,7 @@ local pack = "hunter-shaman-hyjal"
 local title = "猎萨双人 · 50–60"
 if not Polestar.RegisterPack({
     addon = addon, id = pack, title = title, author = "Codex",
-    version = "0.3.0", format = 11, license = "Private use",
+    version = "0.3.1", format = 11, license = "Private use",
     source = "WoW Forever and Polestar 0.4.1. See README.txt.",
 }) then return end
 
@@ -47,9 +47,17 @@ local quest = {
     [3380] = {"沉没的神庙", 46}, [3444] = {"石环", 46, {3380}},
     [3446] = {"深入神庙", 46, {3444}}, [3447] = {"雕像群的秘密", 46, {3444}},
     [4146] = {"除草器的燃料", 47, {4147}}, [5096] = {"误导血色十字军", 50},
+    [5093] = {"战斗的号角：瘟疫之地！", 50}, [5094] = {"战斗的号角：瘟疫之地！", 50},
+    [5095] = {"战斗的号角：瘟疫之地！", 50}, [5405] = {"银色黎明委任徽章", 50},
+    [5098] = {"标记哨塔", 50, {5096}}, [5228] = {"瘟疫之锅", 50, {5096}},
+    [5229] = {"目标：费尔斯通农场", 50, {5228}}, [5230] = {"返回亡灵壁垒", 50, {5229}},
+    [5021] = {"迟到总比不到好", 50}, [5023] = {"迟到总比不到好", 50, {5021}},
+    [5049] = {"杰雷米亚的忧伤", 50, {5023}}, [5050] = {"好运护符", 50},
+    [5051] = {"两半合一", 50, {5050}},
     [98477] = {"Unstable Magic", 48}, [4494] = {"异种蝎的远征", 50},
     [4293] = {"软泥怪的样本…", 48}, [4294] = {"一大堆软泥怪", 48},
     [3568] = {"堕落之水", 45}, [3542] = {"安德隆·甘特的石版", 45, {3517}},
+    [3564] = {"安德隆的报酬", 45, {3542}},
     [91734] = {"Remote Contact", 44},
     [92346] = {"Beneath Nordrassil", 45}, [92069] = {"Claws That Rend, Tusks That Gore", 45},
     [4284] = {"能量水晶", 47}, [3882] = {"挖骨头", 49}, [3883] = {"异型的生态", 48},
@@ -173,6 +181,55 @@ local function along(untilLabel, entry)
     return fields(entry, {along = untilLabel})
 end
 
+-- Along rows can be passed before the player arrives or takes an optional
+-- quest. Keep their live conditions out of Polestar's latched step rules.
+local liveGoals, liveGoalByGoal = {}, {}
+local hiddenFromGuideClasses = {classes = {"!HUNTER", "!SHAMAN"}}
+
+local function watchAlong(entry, predicate)
+    for _, goal in ipairs(entry.goals) do
+        local watched = liveGoalByGoal[goal]
+        if not watched then
+            watched = {goal = goal, only = goal.only, tests = {}}
+            liveGoals[#liveGoals + 1] = watched
+            liveGoalByGoal[goal] = watched
+        end
+        watched.tests[#watched.tests + 1] = predicate
+    end
+    return entry
+end
+
+local function refreshLiveGoals()
+    local C = Polestar.Compat
+    local zoneName, subzone = C.GetZoneText()
+    local results = {}
+    local changed = false
+    for _, watched in ipairs(liveGoals) do
+        local show = true
+        for _, predicate in ipairs(watched.tests) do
+            if results[predicate] == nil then
+                results[predicate] = not not predicate(C, zoneName, subzone)
+            end
+            if not results[predicate] then
+                show = false
+                break
+            end
+        end
+        local only = hiddenFromGuideClasses
+        if show then only = watched.only end
+        if watched.goal.only ~= only then
+            watched.goal.only = only
+            changed = true
+        end
+    end
+    return changed
+end
+
+local function handInAlong(untilLabel, id, where, details)
+    return watchAlong(along(untilLabel, step("顺路交付", optional(turnin(id, where, details)))),
+        function(C) return C.IsOnQuest(id) and C.IsQuestReadyForTurnIn(id) and not C.IsQuestCompleted(id) end)
+end
+
 local function startEither(id, where, closedBy, note)
     return fields(accept(id, where, note), {either = true, closedBy = closedBy})
 end
@@ -192,7 +249,26 @@ route.questGoal, route.accept, route.turnin, route.collect, route.kill = questGo
 route.travel, route.note, route.optional, route.step = travel, note, optional, step
 route.only, route.when, route.onQuest, route.notOnQuest = only, when, onQuest, notOnQuest
 route.handed, route.atLeast, route.ready, route.requireQuest = handed, atLeast, ready, requireQuest
-route.along, route.append = along, append
+route.along, route.handInAlong, route.watchAlong, route.append = along, handInAlong, watchAlong, append
+route.prepareLiveGoals = refreshLiveGoals
+
+function route.startLiveGoals(guideId)
+    local function update()
+        if not refreshLiveGoals() then return end
+        local engine = Polestar.Engine
+        local active = engine and engine.GetGuide()
+        if active and active.id == guideId then engine.RequestUpdate() end
+    end
+    Polestar.OnLogin(update)
+    for _, event in ipairs({"PLAYER_ENTERING_WORLD", "ZONE_CHANGED", "ZONE_CHANGED_INDOORS",
+        "ZONE_CHANGED_NEW_AREA", "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_TURNED_IN",
+        "QUEST_REMOVED", "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED", "PLAYER_LEVEL_UP"}) do
+        Polestar.RegisterEvent(event, update)
+    end
+    Polestar.RegisterEvent("UNIT_QUEST_LOG_CHANGED", function(_, unit)
+        if unit == "player" then update() end
+    end)
+end
 
 local ormak = npc(3352, "奥玛克", zone.orgrimmar, 66.14, 18.56)
 local holt = npc(3039, "浩特·雷角", zone.thunderBluff, 57.3, 89.2)
@@ -210,6 +286,71 @@ local tears = point(zone.swamp, 69, 54)
 local liv = npc(8496, "莉芙·雷兹菲克斯", zone.barrens, 62.45, 38.71)
 local nuara = npc(272633, "Nuara Tremorhoof", zone.mulgore, 33.4, 22.6)
 local fuely = npc(10136, "化学家弗雷", zone.undercity, 47.5, 73.0)
+local andron = npc(6522, "安德隆·甘特", zone.undercity, 54.6, 75.73)
+local derrington = npc(10837, "高级执行官德灵顿", zone.tirisfal, 83.05, 68.91)
+local garush = npc(10839, "银色黎明军官加鲁什", zone.tirisfal, 83.12, 68.32)
+local vandis = npc(11055, "暗影牧师范蒂丝", zone.tirisfal, 82.95, 71.92)
+local janice = npc(10778, "詹妮丝·费尔斯通", zone.western, 38.32, 54.14)
+local bauhaus = npc(10781, "皇家管理人巴哈乌斯", zone.undercity, 69.65, 43.71)
+local jeremiah = npc(8403, "杰雷米亚·派森", zone.undercity, 67.65, 43.66)
+local firstCauldron = object(176361, "瘟疫之锅", zone.western, 37.1, 56.92)
+local janiceParcel = object(175894, "詹妮丝的包裹", zone.western, 38.69, 55.33)
+local atBulwark = {k = "subzone", name = "The Bulwark", area = 152}
+
+local function isPlace(C, text, name, area)
+    return type(text) == "string" and (text == name or text == C.GetAreaName(area))
+end
+
+local function bulwarkLetters()
+    return turnin(5093, derrington), turnin(5094, derrington), turnin(5095, derrington)
+end
+
+local function commissionGoal()
+    return fields(turnin(5405, garush, "领取后装备徽章，击杀天灾怪可拾天灾石。"),
+        {direct = true, minLevel = 50})
+end
+
+local function commissionOffer(required)
+    local commission = commissionGoal()
+    if not required then optional(commission) end
+    return when(step("亡灵壁垒 · 领取银色黎明委任徽章",
+        commission),
+        handed(5401, true), handed(5405, true), handed(5503, true),
+        {k = "has", item = 12846, neg = true}, {k = "equipped", item = 12846, neg = true})
+end
+
+local function coastVials()
+    return fields(questGoal("complete", 3568, point(zone.azshara, 35, 55)),
+        {startItem = 10695, startItemName = "空的试剂瓶", note = "在埃达拉斯废墟岸边四个潮汐池各装一瓶。"})
+end
+
+route.bulwarkLetters, route.commissionOffer, route.coastVials = bulwarkLetters, commissionOffer, coastVials
+
+local function plagueCall(id, giver)
+    local closes = {5096}
+    for _, alternative in ipairs({5093, 5094, 5095}) do
+        if id ~= alternative then closes[#closes + 1] = alternative end
+    end
+    return optional(fields(accept(id, giver, "三地引导只需一份，交给亡灵壁垒的德灵顿。"), {closedBy = closes}))
+end
+
+local function undercityStops(untilLabel)
+    local entries = {
+        along(untilLabel, step("路过幽暗城 · 接东线引导和本地交接",
+            plagueCall(5094, npc(10879, "传令官巴萨扎德", zone.undercity, 66.52, 43)),
+            optional(turnin(3542, andron)), optional(accept(3564, andron, "下次实际到瓦罗莫克时交给杰迪加。")),
+            optional(accept(3568, npc(8390, "药剂师科雷", zone.undercity, 48.64, 71.55),
+                "以后到艾萨拉时带试剂瓶去海岸。")),
+            optional(accept(4293, fuely)), optional(accept(4294, fuely)))),
+        along(untilLabel, step("路过幽暗城 · 交费尔斯通包裹并接护符",
+            optional(turnin(5023, bauhaus)), optional(accept(5049, bauhaus)), optional(turnin(5049, jeremiah)),
+            optional(fields(accept(5050, jeremiah, "下次到费尔斯通农场再找詹妮丝。"), {pre = {5048, 5049}})))),
+    }
+    for _, entry in ipairs(entries) do
+        watchAlong(entry, function(C, name) return isPlace(C, name, "Undercity", 1497) end)
+    end
+    return entries
+end
 
 local function hunterStart()
     return step("阶段一 · 接猎人的护符",
@@ -253,15 +394,20 @@ append({
 }, notOnQuest(8232), handed(8232, true), beforeMail, noMailYet, mailPending)
 
 -- The western circuit carries workshop and temple prerequisites back east.
+append(undercityStops("crater-camp"), beforeMail, noMailYet, mailPending, beforeWinter, noWinterPotionYet)
+
 append({
-    along("crater-camp", when(step("已经在幽暗城时带两种软泥任务",
-        optional(accept(4293, fuely)), optional(accept(4294, fuely)),
-        optional(accept(91734, npc(6522, "安德隆·甘特", zone.undercity, 54.6, 75.73),
-            "后续实际路过艾萨拉瓦罗莫克时交杰迪加。"))),
+    watchAlong(along("crater-camp", step("正在奥格瑞玛时可接另一处瘟疫之地引导",
+        plagueCall(5093, npc(10880, "战斗召唤者戈拉克", zone.orgrimmar, 48.2, 66.1)))),
+        function(C, name) return isPlace(C, name, "Orgrimmar", 1637) end),
+    watchAlong(along("crater-camp", step("正在雷霆崖时可接另一处瘟疫之地引导",
+        plagueCall(5095, npc(10881, "雷霆崖卫兵风行者", zone.thunderBluff, 42.3, 56.5)))),
+        function(C, name) return isPlace(C, name, "Thunder Bluff", 1638) end),
+    along("crater-camp", when(step("幽暗城 · 可顺路带给杰迪加的送件",
+        optional(accept(91734, andron, "后续实际路过艾萨拉瓦罗莫克时交杰迪加。"))),
         {k = "zone", name = "Undercity", area = 1497})),
     when(step("已有堕落之水时顺路到艾萨拉海岸",
-        fields(questGoal("complete", 3568, point(zone.azshara, 35, 55)),
-            {startItem = 10695, startItemName = "空的试剂瓶", note = "在埃达拉斯废墟岸边四个潮汐池各装一瓶。"})),
+        coastVials()),
         onQuest(3568), ready(3568, true), {k = "zone", name = "Azshara", area = 16}),
     along("crater-camp", step("路过奥格瑞玛时提前接安戈洛支线",
         optional(accept(4300, npc(8659, "杰斯雷蒙", zone.orgrimmar, 55.49, 34.12),
@@ -327,19 +473,20 @@ end
 append({
     along("crater-camp", step("塔纳利斯顺路任务",
         optional(accept(4504, tranrek, "在加基森接，安戈洛北边沥青池取样。")),
-        optional(fields(accept(4496, pestlezugg, "交过异种蝎前置可接，途中在南边虫巢取样。"), {pre = {4493, 4494}})),
-        optional(turnin(3528, yehkinya, "已有装满的卵，路过热砂港就找叶基亚。")))),
+        optional(fields(accept(4496, pestlezugg, "交过异种蝎前置可接，途中在南边虫巢取样。"), {pre = {4493, 4494}})))),
+    handInAlong("crater-camp", 3528, yehkinya, "已有装满的卵，路过热砂港就找叶基亚。"),
     along("crater-camp", step("加基森交奥格瑞玛的异种蝎引导",
         optional(turnin(4494, pestlezugg, "持有奥格引导时在加基森交接；没有前置就继续。")))),
+    handInAlong("crater-torwa-food", 87494, torwa),
     fields(step("阶段二 · 塔纳利斯入口找托尔瓦",
         accept(4290, torwa, "从塔纳利斯西南沿路入安戈洛，到东南角见托尔瓦。"),
         accept(4289, torwa), accept(87492, torwa),
-        crystalScale(), optional(turnin(87494, torwa))), {label = "crater-entry"}),
+        crystalScale()), {label = "crater-entry"}),
     step("东南拾蛇颈龙肉块和蓝水晶",
         collect(87492, 280417, "破损的蓝水晶", 1, 1, object(672518, "破损的蓝水晶", zone.crater, 66.3, 75.2)),
         collect(4290, 11504, "蛇颈龙肉块", 1, 1, object(166863, "新鲜的蛇颈龙尸体", zone.crater, 68.87, 57.64))),
-    step("托尔瓦交肉和水晶并续接气味",
-        turnin(4290, torwa), turnin(87492, torwa), accept(4291, torwa)),
+    fields(step("托尔瓦交肉和水晶并续接气味",
+        turnin(4290, torwa), turnin(87492, torwa), accept(4291, torwa)), {label = "crater-torwa-food"}),
     step("东南踩蛋引母暴掠龙",
         collect(4291, 11509, "暴掠龙信息素", 2, 1, point(zone.crater, 67, 73),
             "踩托尔瓦西北的暴掠龙蛋引出拉克维的配偶，再拾信息素。"), willidenJournal(), crystalScale()),
@@ -349,18 +496,21 @@ append({
         collect(3845, 11104, "大指南针", 1, 1, smallPack),
         collect(3845, 11105, "卷曲的羊皮地图", 1, 2, smallPack),
         collect(3845, 11106, "狮头钥匙", 1, 3, smallPack)),
+    handInAlong("crater-camp", 87494, torwa),
     step("东南交气味任务再往营地北上",
-        turnin(4291, torwa), optional(accept(4292, torwa, "队伍能处理拉克维时，可在东塔附近做诱饵。")), willidenJournal(), crystalScale(), optional(turnin(87494, torwa))),
+        turnin(4291, torwa), optional(accept(4292, torwa, "队伍能处理拉克维时，可在东塔附近做诱饵。")), willidenJournal(), crystalScale()),
     fields(step("开马绍尔营地航点",
         travel("getfp", "马绍尔营地", gryfe, {node = 79, note = "沿路去北边的马绍尔营地。"})), {label = "crater-camp"}),
+    handInAlong("crater-camp-exit", 3845, link),
     step("在北营地接齐环线任务",
         accept(4284, jd, "科琳在洞里。"), accept(3882, spark), accept(3881, williden), accept(4145, larion),
-        optional(turnin(3845, link)), optional(accept(3908, link, "续篇顺路去冬泉谷。")),
+        optional(accept(3908, link, "续篇顺路去冬泉谷。")),
         optional(accept(3883, holanyee, "南边虫巢采样，按队伍强度选择。")),
         optional(accept(4492, npc(9997, "斯普拉格·弗劳克", zone.crater, 43.59, 8.49), "路过火羽山时看林戈。")),
         accept(4501, object(174682, "当心翼手龙", zone.crater, 43.54, 8.28))),
-    step("出北营地找希兹尔和卡尔纳",
+    fields(step("出北营地找希兹尔和卡尔纳",
         accept(4503, shizzle), accept(4243, karna, "先找东北山洞里的机器人。包里有秘银外壳可连做后续。")),
+        {label = "crater-camp-exit"}),
     step("在北坡收四色水晶并清沥青池外围",
         collect(4284, 11186, "红色能量水晶", 7, 1, crystals),
         collect(4284, 11188, "黄色能量水晶", 7, 2, crystals),
@@ -396,8 +546,9 @@ append({
     along("crater-turnins", when(step("东侧石板附近用诱饵召拉克维",
         optional(collect(4292, 11510, "拉克维的头", 1, 1, point(zone.crater, 79.65, 49.83),
             "用托尔瓦背包里的肉和信息素，击倒拉克维后拾取。"))), onQuest(4292))),
-    step("顺路在东南交猩猩皮", turnin(4289, torwa), crystalScale(), optional(turnin(87494, torwa)),
-        optional(turnin(4292, torwa))),
+    handInAlong("crater-turnins", 87494, torwa),
+    handInAlong("crater-turnins", 4292, torwa),
+    step("顺路在东南交猩猩皮", turnin(4289, torwa), crystalScale()),
     along("crater-turnins", when(step("有虫巢任务再采样",
         optional(collect(4496, 11837, "格里什信息素", 1, 1, gorishi)),
         optional(fields(questGoal("use", 3883, point(zone.crater, 48.7, 85.3)),
@@ -429,28 +580,32 @@ append({
     step("点亮西部水晶塔并打狂暴翼手龙",
         pylon(4288, 164956, "西部水晶塔", 23.86, 59.19),
         kill(4501, 9167, "狂暴的翼手龙", 15, 2, point(zone.crater, 21, 58.4), "沿西崖打，等级高的单个拉。")),
+    handInAlong("crater-research", 3883, holanyee),
+    handInAlong("crater-research", 3845, link),
     fields(step("回马绍尔营地集中交任务",
         turnin(4501, npc(9997, "斯普拉格·弗劳克", zone.crater, 43.6, 8.65)),
         turnin(4503, shizzle), turnin(4145, larion), accept(4147, larion, "带去棘齿城工坊，和石环一起办。"),
-        turnin(3881, williden), optional(turnin(3884, williden)), optional(turnin(3883, holanyee)),
-        turnin(3882, spark), optional(turnin(3845, link)), optional(accept(3908, link, "冬泉谷交给多诺瓦。")),
+        turnin(3881, williden), optional(turnin(3884, williden)),
+        turnin(3882, spark), optional(accept(3908, link, "冬泉谷交给多诺瓦。")),
         optional(accept(92020, holanyee, "55 级再带书，后续上山时交给 Tiala Whitemane。"))),
         {label = "crater-turnins"}),
-    along("felwood-entry", step("离开安戈洛可顺路到加基森交接",
-        optional(turnin(4504, tranrek)), optional(turnin(4496, pestlezugg)))),
-    step("找科琳交三塔并分析水晶",
+    handInAlong("felwood-entry", 4504, tranrek),
+    handInAlong("felwood-entry", 4496, pestlezugg),
+    fields(step("找科琳交三塔并分析水晶",
         turnin(4285, jd), turnin(4287, jd), turnin(4288, jd), accept(4321, jd), turnin(4321, jd)),
+        {label = "crater-research"}),
 }, beforeWinter, noWinterPotionYet, noMailYet, mailPending)
 
 -- Both workshop errands share one Ratchet stop; the actual pickups unlock the dungeon.
 append({
+    handInAlong("stone-circle-return", 4502, liv),
     step("棘齿城工坊取石环、交车间并接燃料",
         collect(3444, 10556, "石环", 1, 1,
             object(149036, "玛尔冯的箱子", zone.barrens, 62.49, 38.53), "工坊的箱子。"),
-        turnin(4147, liv), accept(4146, liv), optional(turnin(4502, liv)),
+        turnin(4147, liv), accept(4146, liv),
         optional(accept(4502, liv, "还没取过灰时，留到第二次经过安戈洛再做。"))),
-    step("塔纳利斯回交石环并接两项神庙任务",
-        turnin(3444, marvon), accept(3446, marvon), accept(3447, marvon)),
+    fields(step("塔纳利斯回交石环并接两项神庙任务",
+        turnin(3444, marvon), accept(3446, marvon), accept(3447, marvon)), {label = "stone-circle-return"}),
     when(step("去热砂港交已取得的远古之卵",
         turnin(4787, yehkinya), accept(3528, yehkinya, "个人任务和队伍的召唤道具分别确认。")),
         ready(4787)),
@@ -462,6 +617,8 @@ local function elementTurnin(id)
     return when(only(shaman, step("把四种元素交给巴斯拉", turnin(id, bathrah))), onQuest(id))
 end
 
+append(undercityStops("temple-exit"), beforeMail, noMailYet, mailPending)
+
 append({
     when(only(shaman, shamanStart()), handed(8410, true), handed(8411, true)),
     when(only(shaman, step("准备元素材料",
@@ -471,16 +628,115 @@ append({
         onQuest(8410, 8411), handed(8410, true), handed(8411, true)),
     elementTurnin(8410), elementTurnin(8411),
     when(only(shaman, step("接灵魂图腾", fields(accept(8412, bathrah,
-        "从塔伦米尔沿村东的河向北到废墟。交过任一元素任务即可。"), {pre = {8410, 8411}, closedBy = {8413}}))),
+        "从塔伦米尔沿村东的河向北到废墟。交过任一元素任务即可。从幽暗城来时可顺手接瘟疫之地引导。"),
+        {pre = {8410, 8411}, closedBy = {8413}}))),
         notOnQuest(8412), handed(8412, true)),
+}, notOnQuest(8413), handed(8413, true), beforeMail, noMailYet, mailPending)
+
+-- This waypoint is on the Shaman's own material route. An actor already
+-- in the Plaguelands or with the materials ready can continue directly.
+local function diversionPickup()
+    return fields(accept(5096, derrington, "出发前从德灵顿身边的箱子取燃烧瓶。想清第一农场时再烧血色帐篷。"),
+        {crumbs = {5093, 5094, 5095}})
+end
+
+local function outboundWall()
+    local goals = {bulwarkLetters()}
+    table.insert(goals, 1, travel("enter", "亡灵壁垒", point(zone.tirisfal, 83.1, 69), {area = 152}))
+    goals[#goals + 1] = diversionPickup()
+    return step("从亡灵壁垒进入西瘟疫", unpack(goals))
+end
+
+append({
+    when(only(shaman, outboundWall()),
+        onQuest(8412), {k = "zone", name = "Western Plaguelands", area = 28, neg = true}),
+}, ready(8412, true), handed(8412, true), notOnQuest(8413), handed(8413, true), beforeMail, noMailYet, mailPending)
+
+append({
+    only(shaman, commissionOffer(true)),
+}, atBulwark, onQuest(8412), atLeast(50), ready(8412, true),
+    notOnQuest(8413), handed(8413, true), beforeMail, noMailYet, mailPending)
+
+local function localBulwark(C, _, subzone)
+    return (C.GetPlayerInfo().level or 0) >= 50 and isPlace(C, subzone, "The Bulwark", 152)
+end
+
+local bulwarkOverlay = step("经过亡灵壁垒 · 交引导并接血色前线", bulwarkLetters())
+bulwarkOverlay.goals[#bulwarkOverlay.goals + 1] = diversionPickup()
+for _, goal in ipairs(bulwarkOverlay.goals) do optional(goal) end
+local bulwarkBadge = along("temple-exit", step("在亡灵壁垒可领取银色黎明委任徽章", optional(commissionGoal())))
+watchAlong(bulwarkBadge, function(C)
+    local wearing = type(C.IsItemEquipped) == "function" and C.IsItemEquipped(12846)
+    return not C.IsQuestCompleted(5401) and not C.IsQuestCompleted(5405) and not C.IsQuestCompleted(5503)
+        and (C.GetItemCount(12846) or 0) == 0 and not wearing
+end)
+append({
+    watchAlong(along("temple-exit", bulwarkOverlay), localBulwark),
+    watchAlong(bulwarkBadge, localBulwark),
+}, beforeMail, noMailYet, mailPending)
+
+-- These are side stops alongside either character's own trip. Using
+-- optional quest goals lets pickups open their later work without a new
+-- step condition that would latch before the player chooses the branch.
+local eastTrip = {8412, 5093, 5094, 5095, 5096, 5228, 5229, 5230, 5021, 5023, 5049, 5050, 5051}
+
+local function onEastTrip(C, name, subzone)
+    local atWall = isPlace(C, subzone, "The Bulwark", 152)
+    local atFarm = isPlace(C, subzone, "Felstone Field", 199)
+    local inPlaguelands = isPlace(C, name, "Western Plaguelands", 28)
+    if not atWall and not atFarm and not inPlaguelands and not C.IsOnQuest(8412) then return false end
+    for _, id in ipairs(eastTrip) do
+        if C.IsOnQuest(id) then return true end
+    end
+    -- The log can be empty between turning in a quest and taking its
+    -- follow-up. Keep that offer visible when the player is back locally.
+    local done = C.IsQuestCompleted
+    return (atWall and ((done(5096) and not done(5228)) or (done(5228) and not done(5229))))
+        or (atFarm and ((done(5229) and not done(5230)) or (done(5021) and not done(5023))
+            or (done(5050) and not done(5051))))
+end
+
+local function firstFarmStops()
+    local entries = {
+        step("血色前线 · 点帐篷并插旗",
+            fields(questGoal("complete", 5096, object(176088, "血色十字军前线营地", zone.western, 40.69, 51.93)),
+                {startItem = 12807, startItemName = "天灾战旗",
+                    note = "先从亡灵壁垒的箱子（176092）拿燃烧瓶，再用它点燃指挥帐篷并插旗。"})),
+        handInAlong("temple-exit", 5096, derrington),
+        step("亡灵壁垒 · 回报后可接第一口瘟疫锅",
+            accept(5098, derrington, "四塔留到之后的安多哈尔圈。"),
+            accept(5228, derrington), turnin(5228, vandis), accept(5229, vandis)),
+        handInAlong("temple-exit", 5229, firstCauldron),
+        step("费尔斯通农场 · 锅钥匙与包裹",
+            collect(5229, 13194, "费尔斯通农场的瘟疫之锅钥匙", 1, 1,
+                npc(11075, "护锅者拜尔摩", zone.western, 36.9, 57.4), "拾钥匙后在农场的瘟疫之锅（37.1，56.9）交付，再接返回亡灵壁垒。"),
+            accept(5230, firstCauldron),
+            accept(5021, janice), turnin(5021, janiceParcel), accept(5023, janiceParcel, "下次实际进幽暗城时交。")),
+        step("亡灵壁垒 · 交第一农场报告", turnin(5230, vandis)),
+        step("已带好运护符时找费尔斯通的詹妮丝",
+            turnin(5050, janice), accept(5051, janice),
+            collect(5051, 12723, "好运护符", 1, 1, point(zone.western, 38.4, 55.4),
+                "打附近喋喋不休的食尸鬼，取另一半后用手里的半块合成，再交给同一农场的詹妮丝。")),
+        handInAlong("temple-exit", 5051, janice),
+    }
+    for _, entry in ipairs(entries) do
+        along("temple-exit", entry)
+        for _, goal in ipairs(entry.goals) do optional(goal) end
+        watchAlong(entry, onEastTrip)
+    end
+    return entries
+end
+
+append(firstFarmStops(), beforeMail, noMailYet, mailPending)
+
+append({
     when(only(shaman, step("西瘟疫取眼睛和熊爪",
         collect(8412, 20610, "充血的蜘蛛眼", 8, 1, point(zone.western, 31.08, 58.54),
             "从亡灵壁垒进西瘟疫，在冰风岗西北打毒雾潜伏者。"),
         collect(8412, 20611, "厚实的黑爪", 8, 2, point(zone.western, 31.28, 60.13),
             "在同一片打生病的黑熊，食腐秃鹰也可能出其中一种。"))), onQuest(8412)),
     only(shaman, step("回巴斯拉接神庙任务", turnin(8412, bathrah),
-        accept(8413, bathrah), optional(accept(5096, npc(10837, "高级执行官德灵顿", zone.tirisfal, 83.05, 68.91),
-            "路过亡灵壁垒可以接，打塔楼留到以后。")))),
+        accept(8413, bathrah))),
 }, notOnQuest(8413), handed(8413, true), beforeMail, noMailYet, mailPending)
 
 -- Eastern pickups from the route's last pass before entering the temple.
@@ -658,12 +914,14 @@ append({
         optional(collect(86577, 277958, "腐烂的熊器官", 8, 1, point(zone.felwood, 53.45, 28.06))),
         optional(collect(86577, 277959, "腐烂的狼器官", 10, 2, point(zone.felwood, 53.81, 27.74)))),
     step("到岗哨交雕像任务", turnin(86612, winna)),
-    along("timbermaw", when(step("南边死木村可交洛尔的爪子",
-        optional(collect(6162, 15879, "洛尔的爪子", 1, 1, npc(9464, "洛尔", zone.felwood, 48.2, 94.3))),
-        optional(turnin(6162, dreka))), onQuest(6162))),
+    along("timbermaw", when(step("南部死木村找洛尔",
+        optional(collect(6162, 15879, "洛尔的爪子", 1, 1, npc(9464, "洛尔", zone.felwood, 48.2, 94.3)))),
+        onQuest(6162))),
+    handInAlong("timbermaw", 6162, dreka, "已拾到爪子时回费伍德中段的血毒岗哨交德雷卡苏。"),
+    handInAlong("timbermaw", 86577, kelek),
     when(step("南部翡翠圣地交阶段任务",
         turnin(5156, taronn), turnin(5157, greta), turnin(4102, maybess),
-        optional(turnin(86577, kelek)), optional(accept(91952, greta))), {k = "level", op = "<", n = 56}),
+        optional(accept(91952, greta))), {k = "level", op = "<", n = 56}),
     fields(step("在隧道南口找纳菲恩", turnin(8462, nafien), accept(8461, nafien)), {label = "timbermaw"}),
     step("清北边死木村的三类熊怪",
         kill(8461, 7156, "死木巢穴守卫", 6, 1, northDeadwood),
