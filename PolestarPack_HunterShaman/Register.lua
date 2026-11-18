@@ -25,7 +25,7 @@ route.localize()
 route.prepareLiveGoals()
 
 local pack = route.pack
-local guideId = pack .. "/50-60-east"
+local guideId = pack .. "/50-60-east-local"
 if not Polestar.RegisterGuide({
     id = guideId, pack = pack, title = route.title, category = "Leveling",
     faction = "Horde", classes = {"HUNTER", "SHAMAN"}, zone = route.zone.swamp,
@@ -37,8 +37,8 @@ if not Polestar.RegisterGuide({
 route.startLiveGoals(guideId)
 route.localizeInterface()
 
--- A new ID makes the reordered route place from game state, including
--- completed mail, without importing earlier manual skips or step numbers.
-local retired = {"start", "hunter", "shaman", "temple-prep", "temple", "ungoro", "felwood", "winterspring", "hyjal", "main", "50-60"}
+-- Native same-ID remapping can permanently hide a moved Along offer
+-- it records as passed. Place the successor from the actual quest state.
+local retired = {"start", "hunter", "shaman", "temple-prep", "temple", "ungoro", "felwood", "winterspring", "hyjal", "main", "50-60", "50-60-east"}
 for i, name in ipairs(retired) do retired[i] = pack .. "/" .. name end
 Polestar.RetireGuides(pack, retired)

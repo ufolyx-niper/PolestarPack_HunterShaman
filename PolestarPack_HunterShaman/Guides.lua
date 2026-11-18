@@ -3,7 +3,7 @@ local pack = "hunter-shaman-hyjal"
 local title = "猎萨双人 · 50–60"
 if not Polestar.RegisterPack({
     addon = addon, id = pack, title = title, author = "Codex",
-    version = "0.3.1", format = 11, license = "Private use",
+    version = "0.3.2", format = 11, license = "Private use",
     source = "WoW Forever and Polestar 0.4.1. See README.txt.",
 }) then return end
 
@@ -290,11 +290,11 @@ local andron = npc(6522, "安德隆·甘特", zone.undercity, 54.6, 75.73)
 local derrington = npc(10837, "高级执行官德灵顿", zone.tirisfal, 83.05, 68.91)
 local garush = npc(10839, "银色黎明军官加鲁什", zone.tirisfal, 83.12, 68.32)
 local vandis = npc(11055, "暗影牧师范蒂丝", zone.tirisfal, 82.95, 71.92)
-local janice = npc(10778, "詹妮丝·费尔斯通", zone.western, 38.32, 54.14)
-local bauhaus = npc(10781, "皇家管理人巴哈乌斯", zone.undercity, 69.65, 43.71)
-local jeremiah = npc(8403, "杰雷米亚·派森", zone.undercity, 67.65, 43.66)
+local janice = fields(npc(10778, "詹妮丝·费尔斯通", zone.western, 38.32, 54.14), {z = 65.2})
+local bauhaus = fields(npc(10781, "皇家管理人巴哈乌斯", zone.undercity, 69.65, 43.71), {z = -55.3})
+local jeremiah = fields(npc(8403, "杰雷米亚·派森", zone.undercity, 67.65, 43.66), {z = -62})
 local firstCauldron = object(176361, "瘟疫之锅", zone.western, 37.1, 56.92)
-local janiceParcel = object(175894, "詹妮丝的包裹", zone.western, 38.69, 55.33)
+local janiceParcel = fields(object(175894, "詹妮丝的包裹", zone.western, 38.69, 55.33), {z = 59.8})
 local atBulwark = {k = "subzone", name = "The Bulwark", area = 152}
 
 local function isPlace(C, text, name, area)
@@ -342,9 +342,6 @@ local function undercityStops(untilLabel)
             optional(accept(3568, npc(8390, "药剂师科雷", zone.undercity, 48.64, 71.55),
                 "以后到艾萨拉时带试剂瓶去海岸。")),
             optional(accept(4293, fuely)), optional(accept(4294, fuely)))),
-        along(untilLabel, step("路过幽暗城 · 交费尔斯通包裹并接护符",
-            optional(turnin(5023, bauhaus)), optional(accept(5049, bauhaus)), optional(turnin(5049, jeremiah)),
-            optional(fields(accept(5050, jeremiah, "下次到费尔斯通农场再找詹妮丝。"), {pre = {5048, 5049}})))),
     }
     for _, entry in ipairs(entries) do
         watchAlong(entry, function(C, name) return isPlace(C, name, "Undercity", 1497) end)
@@ -373,6 +370,63 @@ local noMailYet = handed(93197, true)
 local mailPending = handed(93269, true)
 local beforeWinter = notOnQuest(92859, 98462, 93197, 93406, 93269)
 local noWinterPotionYet = handed(92859, true)
+
+local function atFelstone(C, _, subzone)
+    return isPlace(C, subzone, "Felstone Field", 199)
+end
+
+local function atUndercity(C, name)
+    return isPlace(C, name, "Undercity", 1497)
+end
+
+local function localPickup(titleText, goal, atPlace)
+    local entry = along(true, step(titleText, optional(goal)))
+    return watchAlong(entry, function(C, name, subzone)
+        if not atPlace(C, name, subzone) or (C.GetPlayerInfo().level or 0) < goal.minLevel
+            or C.IsOnQuest(goal.quest) or C.IsQuestCompleted(goal.quest) then return false end
+        for _, id in ipairs(goal.preAll or {}) do
+            if not C.IsQuestCompleted(id) then return false end
+        end
+        if not goal.pre then return true end
+        for _, id in ipairs(goal.pre) do
+            if C.IsQuestCompleted(id) then return true end
+        end
+        return false
+    end)
+end
+
+local function localHandIn(titleText, id, where, atPlace)
+    local entry = handInAlong(true, id, where)
+    entry.title = titleText
+    return watchAlong(entry, atPlace)
+end
+
+-- Native Along displays only rows before the live step. Place the local
+-- parcel chain first, with no end label, so a visit at any stage can show it.
+append({
+    localPickup("费尔斯通农场 · 楼上可找詹妮丝接包裹", accept(5021, janice), atFelstone),
+    localHandIn("费尔斯通农场 · 在包裹处交第一段", 5021, janiceParcel, atFelstone),
+    localPickup("费尔斯通农场 · 可带包裹去幽暗城",
+        accept(5023, janiceParcel, "下次实际进幽暗城时交。"), atFelstone),
+    localHandIn("幽暗城 · 顺路交费尔斯通包裹", 5023, bauhaus, atUndercity),
+    localPickup("幽暗城 · 可接杰雷米亚的忧伤", accept(5049, bauhaus), atUndercity),
+    localHandIn("幽暗城 · 顺路见杰雷米亚", 5049, jeremiah, atUndercity),
+    localPickup("幽暗城 · 可带好运护符",
+        fields(accept(5050, jeremiah, "下次到费尔斯通农场再找詹妮丝。"), {pre = {5048, 5049}}),
+        atUndercity),
+    localHandIn("费尔斯通农场 · 顺路交好运护符", 5050, janice, atFelstone),
+    localPickup("费尔斯通农场 · 可接两半合一", accept(5051, janice), atFelstone),
+    watchAlong(along(true, step("费尔斯通农场 · 合成好运护符",
+        optional(fields(questGoal("complete", 5051, point(zone.western, 38.4, 55.4)), {
+            startItem = 12721, startItemName = "一半好运护符",
+            objs = {{text = "Good Luck Charm", count = 1}},
+            note = "打附近喋喋不休的食尸鬼，拾取另一半护符。用手里的半块合成整只护符。",
+        })))), function(C, name, subzone)
+            return atFelstone(C, name, subzone) and C.IsOnQuest(5051)
+                and not C.IsQuestReadyForTurnIn(5051) and not C.IsQuestCompleted(5051)
+        end),
+    localHandIn("费尔斯通农场 · 顺路交两半合一", 5051, janice, atFelstone),
+})
 
 -- 1. Class prerequisites, followed by the western circuit and temple.
 append({
@@ -678,7 +732,7 @@ append({
 -- These are side stops alongside either character's own trip. Using
 -- optional quest goals lets pickups open their later work without a new
 -- step condition that would latch before the player chooses the branch.
-local eastTrip = {8412, 5093, 5094, 5095, 5096, 5228, 5229, 5230, 5021, 5023, 5049, 5050, 5051}
+local eastTrip = {8412, 5093, 5094, 5095, 5096, 5228, 5229, 5230}
 
 local function onEastTrip(C, name, subzone)
     local atWall = isPlace(C, subzone, "The Bulwark", 152)
@@ -692,8 +746,7 @@ local function onEastTrip(C, name, subzone)
     -- follow-up. Keep that offer visible when the player is back locally.
     local done = C.IsQuestCompleted
     return (atWall and ((done(5096) and not done(5228)) or (done(5228) and not done(5229))))
-        or (atFarm and ((done(5229) and not done(5230)) or (done(5021) and not done(5023))
-            or (done(5050) and not done(5051))))
+        or (atFarm and done(5229) and not done(5230))
 end
 
 local function firstFarmStops()
@@ -707,17 +760,11 @@ local function firstFarmStops()
             accept(5098, derrington, "四塔留到之后的安多哈尔圈。"),
             accept(5228, derrington), turnin(5228, vandis), accept(5229, vandis)),
         handInAlong("temple-exit", 5229, firstCauldron),
-        step("费尔斯通农场 · 锅钥匙与包裹",
+        step("费尔斯通农场 · 锅钥匙",
             collect(5229, 13194, "费尔斯通农场的瘟疫之锅钥匙", 1, 1,
                 npc(11075, "护锅者拜尔摩", zone.western, 36.9, 57.4), "拾钥匙后在农场的瘟疫之锅（37.1，56.9）交付，再接返回亡灵壁垒。"),
-            accept(5230, firstCauldron),
-            accept(5021, janice), turnin(5021, janiceParcel), accept(5023, janiceParcel, "下次实际进幽暗城时交。")),
+            accept(5230, firstCauldron)),
         step("亡灵壁垒 · 交第一农场报告", turnin(5230, vandis)),
-        step("已带好运护符时找费尔斯通的詹妮丝",
-            turnin(5050, janice), accept(5051, janice),
-            collect(5051, 12723, "好运护符", 1, 1, point(zone.western, 38.4, 55.4),
-                "打附近喋喋不休的食尸鬼，取另一半后用手里的半块合成，再交给同一农场的詹妮丝。")),
-        handInAlong("temple-exit", 5051, janice),
     }
     for _, entry in ipairs(entries) do
         along("temple-exit", entry)
