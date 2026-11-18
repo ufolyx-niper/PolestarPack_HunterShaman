@@ -2,7 +2,7 @@
 ## Title: Polestar: Hunter and Shaman to Hyjal
 ## Title-zhCN: Polestar 猎萨双人 · 上海加尔
 ## Notes-zhCN: Forever 部落双人路线，从 50 级职业任务到海加尔邮政背包。
-## Version: 0.1.0
+## Version: 0.2.0
 ## Author: Codex
 ## Dependencies: Polestar
 ## X-Polestar-Pack: hunter-shaman-hyjal
