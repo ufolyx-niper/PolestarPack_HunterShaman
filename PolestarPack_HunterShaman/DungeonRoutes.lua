@@ -146,8 +146,9 @@ function route.addBlackmaw()
         step("向守门者复命后接尾王", turnin(86814, rageroar), accept(92065, rageroar),
             optional(accept(92066, nok, "先前未领到时，离开 Ursolan 前可再问一次。"))),
         route.handInAlong("blackmaw-mulgore", 3761, ghede),
-        route.along("blackmaw-mulgore", step("雷霆崖顺手接交晨光麦研究",
-            optional(accept(3782, hamuul)), optional(turnin(3782, bashana)))),
+        route.watchAlong(route.along("blackmaw-mulgore", step("雷霆崖顺手接交晨光麦研究",
+            route.watchPickup(accept(3782, hamuul), route.atThunderBluff),
+            optional(turnin(3782, bashana)))), route.atThunderBluff),
         step("雷霆崖换取采集根须任务", turnin(92346, nara), accept(92343, nara)),
         handInIfReady("天望高地交已有的十枚魔法微粒", 98477, nuara,
             "后续 98476 是额外交付，经过时材料足再考虑。"),
@@ -332,8 +333,11 @@ function route.addBRD()
         handInIfReady("首次出本后向萨尔汇报监狱", 4001, thrall),
         when(step("听萨尔讲东部王国", accept(4002, thrall), turnin(4002, thrall)),
             handed(4001)),
-        route.along("brd-end", when(step("可顺手接以后再做的救公主任务",
-            optional(accept(4003, thrall, "这是后续深渊行程。此时留在日志。"))), handed(4002))),
+        route.watchAlong(route.along("brd-end", step("可顺手接以后再做的救公主任务",
+            optional(accept(4003, thrall, "这是后续深渊行程。此时留在日志。")))),
+            function(C, name, subzone)
+                return route.atOrgrimmar(C, name, subzone) and C.IsQuestCompleted(4002)
+            end),
         handInIfReady("回莫高雷交火焰之地碎片", 97197, alaana),
         fields(handInIfReady("天望高地交深渊途中收齐的微粒", 98477, nuara), {label = "brd-end"}),
     }, atLeast(55))

@@ -3,7 +3,7 @@ local pack = "hunter-shaman-hyjal"
 local title = "猎萨双人 · 50–60"
 if not Polestar.RegisterPack({
     addon = addon, id = pack, title = title, author = "Codex",
-    version = "0.3.3", format = 11, license = "Private use",
+    version = "0.3.4", format = 11, license = "Private use",
     source = "WoW Forever and Polestar 0.4.1. See README.txt.",
 }) then return end
 
@@ -304,6 +304,19 @@ local function isPlace(C, text, name, area)
     return type(text) == "string" and (text == name or text == C.GetAreaName(area))
 end
 
+local function atCity(name, area)
+    return function(C, zoneName, subzone)
+        return isPlace(C, zoneName, name, area) or isPlace(C, subzone, name, area)
+    end
+end
+
+local atUndercity = atCity("Undercity", 1497)
+local atOrgrimmar = atCity("Orgrimmar", 1637)
+local atThunderBluff = atCity("Thunder Bluff", 1638)
+local atRatchet = atCity("Ratchet", 392)
+local atGadgetzan = atCity("Gadgetzan", 976)
+route.atOrgrimmar, route.atThunderBluff = atOrgrimmar, atThunderBluff
+
 -- Native Along can carry unfinished work past its end label. The target
 -- list uses every visible Along monster or dropper, so scope local work.
 local function inCrater(C, name)
@@ -375,7 +388,7 @@ local function undercityStops(untilLabel)
             optional(accept(4293, fuely)), optional(accept(4294, fuely)))),
     }
     for _, entry in ipairs(entries) do
-        watchAlong(entry, function(C, name) return isPlace(C, name, "Undercity", 1497) end)
+        watchAlong(entry, atUndercity)
     end
     return entries
 end
@@ -406,13 +419,10 @@ local function atFelstone(C, _, subzone)
     return isPlace(C, subzone, "Felstone Field", 199)
 end
 
-local function atUndercity(C, name)
-    return isPlace(C, name, "Undercity", 1497)
-end
 
-local function localPickup(titleText, goal, atPlace)
-    local entry = along(true, step(titleText, optional(goal)))
-    return watchAlong(entry, function(C, name, subzone)
+
+local function watchPickup(goal, atPlace)
+    return watchGoal(optional(goal), function(C, name, subzone)
         if not atPlace(C, name, subzone) or (C.GetPlayerInfo().level or 0) < goal.minLevel
             or C.IsOnQuest(goal.quest) or C.IsQuestCompleted(goal.quest) then return false end
         for _, id in ipairs(goal.preAll or {}) do
@@ -424,6 +434,11 @@ local function localPickup(titleText, goal, atPlace)
         end
         return false
     end)
+end
+route.watchPickup = watchPickup
+
+local function localPickup(titleText, goal, atPlace)
+    return along(true, step(titleText, watchPickup(goal, atPlace)))
 end
 
 local function localHandIn(titleText, id, where, atPlace)
@@ -484,29 +499,27 @@ append(undercityStops("crater-camp"), beforeMail, noMailYet, mailPending, before
 append({
     watchAlong(along("crater-camp", step("正在奥格瑞玛时可接另一处瘟疫之地引导",
         plagueCall(5093, npc(10880, "战斗召唤者戈拉克", zone.orgrimmar, 48.2, 66.1)))),
-        function(C, name) return isPlace(C, name, "Orgrimmar", 1637) end),
+        atOrgrimmar),
     watchAlong(along("crater-camp", step("正在雷霆崖时可接另一处瘟疫之地引导",
         plagueCall(5095, npc(10881, "雷霆崖卫兵风行者", zone.thunderBluff, 42.3, 56.5)))),
-        function(C, name) return isPlace(C, name, "Thunder Bluff", 1638) end),
-    along("crater-camp", when(step("幽暗城 · 可顺路带给杰迪加的送件",
-        optional(accept(91734, andron, "后续实际路过艾萨拉瓦罗莫克时交杰迪加。"))),
-        {k = "zone", name = "Undercity", area = 1497})),
+        atThunderBluff),
+    watchAlong(along("crater-camp", step("幽暗城 · 可顺路带给杰迪加的送件",
+        optional(accept(91734, andron, "后续实际路过艾萨拉瓦罗莫克时交杰迪加。")))), atUndercity),
     when(step("已有堕落之水时顺路到艾萨拉海岸",
         coastVials()),
         onQuest(3568), ready(3568, true), {k = "zone", name = "Azshara", area = 16}),
     along("crater-camp", step("路过奥格瑞玛时提前接安戈洛支线",
-        optional(accept(4300, npc(8659, "杰斯雷蒙", zone.orgrimmar, 55.49, 34.12),
-            "沿环形山暴掠龙路线拾爪子，留到回奥格瑞玛时交。")),
-        optional(fields(accept(4494, npc(7010, "兹尔宾·鼓眼", zone.orgrimmar, 56.34, 46.45)),
-            {pre = {32, 7732}})))),
+        watchPickup(accept(4300, npc(8659, "杰斯雷蒙", zone.orgrimmar, 55.49, 34.12),
+            "沿环形山暴掠龙路线拾爪子，留到回奥格瑞玛时交。"), atOrgrimmar),
+        watchPickup(fields(accept(4494, npc(7010, "兹尔宾·鼓眼", zone.orgrimmar, 56.34, 46.45)),
+            {pre = {32, 7732}}), atOrgrimmar))),
     fields(step("莫高雷先取元素吸引器",
         accept(98477, nuara, "在天望高地各领元素吸引器。第一次进神庙前使用，沿后续副本累计微粒。")), {label = "mulgore-attractor"}),
-    along("crater-camp", step("路过雷霆崖带安戈洛泥土任务",
+    watchAlong(along("crater-camp", step("路过雷霆崖带安戈洛泥土任务",
         optional(accept(3761, npc(5769, "哈缪尔·符文图腾", zone.thunderBluff, 78.08, 29.02),
-            "已经带异种蝎的远征时腾出 25 份泥土，分别交两项。")))),
-    along("crater-camp", when(step("已经在棘齿城时接火山灰任务",
-        optional(accept(4502, liv, "到了安戈洛火羽山再拾灰。"))),
-        {k = "subzone", name = "Ratchet", area = 392})),
+            "已经带异种蝎的远征时腾出 25 份泥土，分别交两项。")))), atThunderBluff),
+    watchAlong(along("crater-camp", step("已经在棘齿城时接火山灰任务",
+        optional(accept(4502, liv, "到了安戈洛火羽山再拾灰。")))), atRatchet),
     step("菲拉斯莫沙彻营地接神庙引导",
         fields(accept(3380, npc(8115, "巫医尤克里", zone.feralas, 74.4, 43.5)),
             {closedBy = {3444, 3446, 3447}})),
@@ -556,12 +569,17 @@ end
 
 -- 2. Enter at Torwa, then sweep north, east, south and west from the refuge.
 append({
-    along("crater-camp", step("塔纳利斯顺路任务",
-        optional(accept(4504, tranrek, "在加基森接，安戈洛北边沥青池取样。")),
-        optional(fields(accept(4496, pestlezugg, "交过异种蝎前置可接，途中在南边虫巢取样。"), {pre = {4493, 4494}})))),
+    along("crater-camp", step("加基森顺路任务",
+        watchPickup(accept(4504, tranrek, "在加基森接，安戈洛北边沥青池取样。"), atGadgetzan),
+        watchPickup(fields(accept(4496, pestlezugg, "交过异种蝎前置可接，途中在南边虫巢取样。"),
+            {pre = {4493, 4494}}), atGadgetzan))),
     handInAlong("crater-camp", 3528, yehkinya, "已有装满的卵，路过热砂港就找叶基亚。"),
-    along("crater-camp", step("加基森交奥格瑞玛的异种蝎引导",
+    watchAlong(along("crater-camp", step("加基森交奥格瑞玛的异种蝎引导",
         optional(turnin(4494, pestlezugg, "持有奥格引导时在加基森交接；没有前置就继续。")))),
+        function(C, name, subzone)
+            return atGadgetzan(C, name, subzone) and C.IsOnQuest(4494)
+                and not C.IsQuestCompleted(4494)
+        end),
     handInAlong("crater-torwa-food", 87494, torwa),
     fields(step("阶段二 · 塔纳利斯入口找托尔瓦",
         accept(4290, torwa, "从塔纳利斯西南沿路入安戈洛，到东南角见托尔瓦。"),
@@ -749,15 +767,19 @@ end
 local bulwarkOverlay = step("经过亡灵壁垒 · 交引导并接血色前线", bulwarkLetters())
 bulwarkOverlay.goals[#bulwarkOverlay.goals + 1] = diversionPickup()
 for _, goal in ipairs(bulwarkOverlay.goals) do optional(goal) end
-local bulwarkBadge = along("temple-exit", step("在亡灵壁垒可领取银色黎明委任徽章", optional(commissionGoal())))
-watchAlong(bulwarkBadge, function(C)
+local function commissionAvailable(C)
     local wearing = type(C.IsItemEquipped) == "function" and C.IsItemEquipped(12846)
     return not C.IsQuestCompleted(5401) and not C.IsQuestCompleted(5405) and not C.IsQuestCompleted(5503)
         and (C.GetItemCount(12846) or 0) == 0 and not wearing
-end)
+end
+
+function route.localCommission(entry)
+    return watchAlong(watchAlong(entry, localBulwark), commissionAvailable)
+end
+
 append({
     watchAlong(along("temple-exit", bulwarkOverlay), localBulwark),
-    watchAlong(bulwarkBadge, localBulwark),
+    route.localCommission(along("temple-exit", step("在亡灵壁垒可领取银色黎明委任徽章", optional(commissionGoal())))),
 }, beforeMail, noMailYet, mailPending)
 
 -- These are side stops alongside either character's own trip. Using

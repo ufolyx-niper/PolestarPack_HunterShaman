@@ -34,6 +34,26 @@ if not Polestar.RegisterGuide({
     keywords = {"猎萨双人", "神庙", "安戈洛", "费伍德", "冬泉谷", "海加尔邮政背包", "黑喉", "黑石深渊", "造物者平台"},
     steps = route.steps,
 }) then return end
+-- The old city predicates latched numeric step flags before the visit.
+-- Native explicit Along skips use goal keys, and the step order is unchanged.
+Polestar.OnInit(function()
+    local state = Polestar.CharState()
+    local versions = state.shapeVersions
+    local previous = versions and versions[guideId]
+    if previous ~= "0.3.2" and previous ~= "0.3.3" then return end
+    local keys = state.stepKeys and state.stepKeys[guideId]
+    if type(keys) ~= "table" then return end
+    -- Native step-key hashes for the old single-goal accept rows.
+    local cityKeys = {[3330348535] = true, [100744090] = true, [100738646] = true}
+    local skipped, latched = state.skipped[guideId], state.when[guideId]
+    for index, key in ipairs(keys) do
+        if cityKeys[key] then
+            if skipped and skipped[index] == true then skipped[index] = nil end
+            if latched and latched[index] == true then latched[index] = nil end
+        end
+    end
+end)
+
 route.startLiveGoals(guideId)
 route.localizeInterface()
 

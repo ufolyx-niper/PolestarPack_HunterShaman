@@ -158,7 +158,7 @@ function route.addPlaguelands()
                 minLevel = 45, preAll = { 3569 }, direct = true }),
         step("幽暗城 · 药剂区和皇家区",
             { t = "accept", quest = 5961, title = "女妖之王的勇士", npc = 10181, npcName = "希尔瓦娜斯·风行者", map = 1458, x = 58.05, y = 91.79, z = -57.2, f = "e", minLevel = 54 }),
-        route.along("late-scarlet-camp", route.commissionOffer()),
+        route.localCommission(route.along("late-scarlet-camp", route.commissionOffer())),
         step("亡灵壁垒 · 交尚在日志里的三地引导", route.bulwarkLetters()),
         step("亡灵壁垒 · 永望镇报告和血色营地",
             { t = "goto", map = 1420, x = 83.1, y = 69, text = "东出幽暗城，沿提瑞斯法道路到亡灵壁垒" },
