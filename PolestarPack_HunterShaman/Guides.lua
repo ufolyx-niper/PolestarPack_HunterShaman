@@ -3,7 +3,7 @@ local pack = "hunter-shaman-hyjal"
 local title = "猎萨双人 · 50–60"
 if not Polestar.RegisterPack({
     addon = addon, id = pack, title = title, author = "Codex",
-    version = "0.3.2", format = 11, license = "Private use",
+    version = "0.3.3", format = 11, license = "Private use",
     source = "WoW Forever and Polestar 0.4.1. See README.txt.",
 }) then return end
 
@@ -186,16 +186,19 @@ end
 local liveGoals, liveGoalByGoal = {}, {}
 local hiddenFromGuideClasses = {classes = {"!HUNTER", "!SHAMAN"}}
 
-local function watchAlong(entry, predicate)
-    for _, goal in ipairs(entry.goals) do
-        local watched = liveGoalByGoal[goal]
-        if not watched then
-            watched = {goal = goal, only = goal.only, tests = {}}
-            liveGoals[#liveGoals + 1] = watched
-            liveGoalByGoal[goal] = watched
-        end
-        watched.tests[#watched.tests + 1] = predicate
+local function watchGoal(goal, predicate)
+    local watched = liveGoalByGoal[goal]
+    if not watched then
+        watched = {goal = goal, only = goal.only, tests = {}}
+        liveGoals[#liveGoals + 1] = watched
+        liveGoalByGoal[goal] = watched
     end
+    watched.tests[#watched.tests + 1] = predicate
+    return goal
+end
+
+local function watchAlong(entry, predicate)
+    for _, goal in ipairs(entry.goals) do watchGoal(goal, predicate) end
     return entry
 end
 
@@ -299,6 +302,34 @@ local atBulwark = {k = "subzone", name = "The Bulwark", area = 152}
 
 local function isPlace(C, text, name, area)
     return type(text) == "string" and (text == name or text == C.GetAreaName(area))
+end
+
+-- Native Along can carry unfinished work past its end label. The target
+-- list uses every visible Along monster or dropper, so scope local work.
+local function inCrater(C, name)
+    return isPlace(C, name, "Un'Goro Crater", 490)
+end
+
+local function inWesternPlaguelands(C, name)
+    return isPlace(C, name, "Western Plaguelands", 28)
+end
+
+local function inFelwood(C, name)
+    return isPlace(C, name, "Felwood", 361)
+end
+
+local function inWinterspring(C, name)
+    return isPlace(C, name, "Winterspring", 618)
+end
+
+local function ashAvailable(C, name)
+    return inCrater(C, name) and C.IsOnQuest(4502)
+        and not C.IsQuestReadyForTurnIn(4502) and not C.IsQuestCompleted(4502)
+end
+
+function route.craterAsh(details)
+    return watchGoal(optional(collect(4502, 11829, "安戈洛灰烬", 9, 1,
+        point(zone.crater, 50.7, 49.3), details)), ashAvailable)
 end
 
 local function bulwarkLetters()
@@ -598,33 +629,33 @@ append({
             "已有奥格瑞玛的任务时顺路打暴掠龙。")), willidenJournal(), crystalScale()),
     step("点亮东部水晶塔", pylon(4287, 164957, "东部水晶塔", 77.16, 49.98)),
     along("crater-turnins", when(step("东侧石板附近用诱饵召拉克维",
-        optional(collect(4292, 11510, "拉克维的头", 1, 1, point(zone.crater, 79.65, 49.83),
-            "用托尔瓦背包里的肉和信息素，击倒拉克维后拾取。"))), onQuest(4292))),
+        watchGoal(optional(collect(4292, 11510, "拉克维的头", 1, 1, point(zone.crater, 79.65, 49.83),
+            "用托尔瓦背包里的肉和信息素，击倒拉克维后拾取。")), inCrater)), onQuest(4292))),
     handInAlong("crater-turnins", 87494, torwa),
     handInAlong("crater-turnins", 4292, torwa),
     step("顺路在东南交猩猩皮", turnin(4289, torwa), crystalScale()),
     along("crater-turnins", when(step("有虫巢任务再采样",
-        optional(collect(4496, 11837, "格里什信息素", 1, 1, gorishi)),
+        watchGoal(optional(collect(4496, 11837, "格里什信息素", 1, 1, gorishi)), inCrater),
         optional(fields(questGoal("use", 3883, point(zone.crater, 48.7, 85.3)),
             {item = 11132, itemName = "未使用的采样瓶", oi = 1, note = "进虫巢深处再用空瓶。"})),
         optional(collect(3883, 11131, "虫穴内壁样本", 1, 1, point(zone.crater, 48.7, 85.3)))),
         onQuest(4496, 3883))),
     along("crater-turnins", when(step("两项泥土任务合留 25 份",
-        optional(collect(nil, 11018, "安戈洛的泥土", 25, nil, gorishi,
-            "每人留 5 份交加基森，另留 20 份交雷霆崖。环形山多数地带可顺手拾。"))),
+        watchGoal(optional(collect(nil, 11018, "安戈洛的泥土", 25, nil, gorishi,
+            "每人留 5 份交加基森，另留 20 份交雷霆崖。环形山多数地带可顺手拾。")), inCrater)),
         onQuest(3761), onQuest(4496))),
     along("crater-turnins", when(step("只带雷霆崖任务时留 20 份泥土",
-        optional(collect(3761, 11018, "安戈洛的泥土", 20, 1, gorishi))),
+        watchGoal(optional(collect(3761, 11018, "安戈洛的泥土", 20, 1, gorishi)), inCrater)),
         onQuest(3761), notOnQuest(4496))),
     along("crater-turnins", when(step("只带加基森任务时留 5 份泥土",
-        optional(collect(4496, 11018, "安戈洛的泥土", 5, 2, gorishi))),
+        watchGoal(optional(collect(4496, 11018, "安戈洛的泥土", 5, 2, gorishi)), inCrater)),
         onQuest(4496), notOnQuest(3761))),
     along("crater-turnins", step("路过火羽山时找林戈、拾火山灰",
         optional(turnin(4492, npc(9999, "林戈", zone.crater, 51.92, 49.91), "在山腰洞里。")),
-        optional(collect(4502, 11829, "安戈洛灰烬", 9, 1, point(zone.crater, 50.7, 49.3))))),
+        route.craterAsh())),
     along("crater-turnins", when(step("安戈洛西侧收原始软泥样本",
-        optional(collect(nil, 12235, "安戈洛软泥怪样本", 25, nil, point(zone.crater, 36.1, 65.5),
-            "从软泥怪身上拾取原始样本，可多带一些。下次到幽暗城再用弗雷的绿色试验器检验。"))),
+        watchGoal(optional(collect(nil, 12235, "安戈洛软泥怪样本", 25, nil, point(zone.crater, 36.1, 65.5),
+            "从软泥怪身上拾取原始样本，可多带一些。下次到幽暗城再用弗雷的绿色试验器检验。")), inCrater)),
         onQuest(4294), ready(4294, true))),
     step("西南扫骨头、双帆龙和营地物资",
         collect(3882, 11114, "恐龙骨头", 8, 1, point(zone.crater, 46.09, 68.5), "在地上拾取，避开精英剑龙。"),
@@ -761,8 +792,8 @@ local function firstFarmStops()
             accept(5228, derrington), turnin(5228, vandis), accept(5229, vandis)),
         handInAlong("temple-exit", 5229, firstCauldron),
         step("费尔斯通农场 · 锅钥匙",
-            collect(5229, 13194, "费尔斯通农场的瘟疫之锅钥匙", 1, 1,
-                npc(11075, "护锅者拜尔摩", zone.western, 36.9, 57.4), "拾钥匙后在农场的瘟疫之锅（37.1，56.9）交付，再接返回亡灵壁垒。"),
+            watchGoal(collect(5229, 13194, "费尔斯通农场的瘟疫之锅钥匙", 1, 1,
+                npc(11075, "护锅者拜尔摩", zone.western, 36.9, 57.4), "拾钥匙后在农场的瘟疫之锅（37.1，56.9）交付，再接返回亡灵壁垒。"), inWesternPlaguelands),
             accept(5230, firstCauldron)),
         step("亡灵壁垒 · 交第一农场报告", turnin(5230, vandis)),
     }
@@ -837,7 +868,9 @@ append({
         optional(fields(questGoal("use", 98477, tears), {
             item = 281371, itemName = "元素吸引器", note = "进本前使用，效果在身时顺手拾微粒。十个微粒可跨副本累计。"
         })),
-        optional(collect(98477, 274964, "不稳定的魔法微粒", 10, 1))), onQuest(98477), ready(98477, true))),
+        optional(fields(questGoal("complete", 98477), {
+            note = "不稳定的魔法微粒会跨地区累计，数量看任务进度。",
+        }))), onQuest(98477), ready(98477, true))),
     along("temple-closed", step("尾王掉落后在本内交精华",
         optional(accept(3373, {item = 10454, itemName = "伊兰尼库斯的精华"}, "打倒伊兰尼库斯后右键掉落物。")),
         optional(turnin(3373, object(148512, "精华之泉"))))),
@@ -927,8 +960,8 @@ append({
         kill(5155, 7112, "加德纳尔教徒", 6, 4, jaedenar)),
     step("交加德纳尔并续接取水", turnin(5155, greta), accept(5157, greta)),
     along("timbermaw", when(step("费伍德沿途收原始软泥样本",
-        optional(collect(nil, 12230, "费伍德软泥怪样本", 25, nil, jaedenar,
-            "加德纳尔入口的被污染软泥怪与碧火废墟的被诅咒软泥怪都可拾原始样本。到幽暗城用弗雷的红色试验器检验。"))),
+        watchGoal(optional(collect(nil, 12230, "费伍德软泥怪样本", 25, nil, jaedenar,
+            "加德纳尔入口的被污染软泥怪与碧火废墟的被诅咒软泥怪都可拾原始样本。到幽暗城用弗雷的红色试验器检验。")), inFelwood)),
         onQuest(4293), ready(4293, true))),
     step("在加德纳尔腐化月亮井装水",
         fields(questGoal("use", 5157, point(zone.felwood, 35.2, 59.8)),
@@ -962,7 +995,7 @@ append({
         optional(collect(86577, 277959, "腐烂的狼器官", 10, 2, point(zone.felwood, 53.81, 27.74)))),
     step("到岗哨交雕像任务", turnin(86612, winna)),
     along("timbermaw", when(step("南部死木村找洛尔",
-        optional(collect(6162, 15879, "洛尔的爪子", 1, 1, npc(9464, "洛尔", zone.felwood, 48.2, 94.3)))),
+        watchGoal(optional(collect(6162, 15879, "洛尔的爪子", 1, 1, npc(9464, "洛尔", zone.felwood, 48.2, 94.3))), inFelwood)),
         onQuest(6162))),
     handInAlong("timbermaw", 6162, dreka, "已拾到爪子时回费伍德中段的血毒岗哨交德雷卡苏。"),
     handInAlong("timbermaw", 86577, kelek),
@@ -1045,8 +1078,8 @@ append({
         kill(8464, 7438, "冬泉巨熊怪", 8, 3, point(zone.winterspring, 67.1, 35.4)),
         turnin(8464, salfa)), onQuest(8464), below56),
     along("level-56", when(step("北边枭兽补经验",
-        optional(kill(4521, 7451, "狂怒的枭兽", 15, 1, point(zone.winterspring, 58.02, 31.66))),
-        optional(kill(4521, 7450, "蓬乱的枭兽", 15, 2, point(zone.winterspring, 54.92, 37.68)))),
+        watchGoal(optional(kill(4521, 7451, "狂怒的枭兽", 15, 1, point(zone.winterspring, 58.02, 31.66))), inWinterspring),
+        watchGoal(optional(kill(4521, 7450, "蓬乱的枭兽", 15, 2, point(zone.winterspring, 54.92, 37.68))), inWinterspring)),
         onQuest(4521), below56)),
     step("到 55 级准备隐遁药水",
         fields({t = "level", level = 55, note = "还差经验时，可交附近任务或打冰蓟雪人。"}, yetis)),

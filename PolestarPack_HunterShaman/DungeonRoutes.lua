@@ -156,9 +156,9 @@ function route.addBlackmaw()
         route.along("blackmaw-exit", when(step("持有双熊任务时取双熊图腾",
             optional(collect(92066, 249694, "Totem of Ursoc", 1, 1)),
             optional(collect(92066, 249693, "Totem of Ursol", 1, 2))), onQuest(92066))),
-        route.along("blackmaw-exit", when(step("持有袋子任务时沿途拾取",
+        route.watchAlong(route.along("blackmaw-exit", when(step("持有袋子任务时沿途拾取",
             optional(collect(97327, 273050, "Blackmaw Pouch", 5, 1, nil, "途中查看熊怪和首领掉落。"))),
-            onQuest(97327))),
+            onQuest(97327))), function(C) return C.GetInstanceMapID() == 2974 end),
         when(step("黑喉要塞 · 首次进本",
             entrance("Blackmaw Hold", point(zone.azshara, 34.9, 23.8), 16554,
                 "从艾萨拉北部熊怪石门进洞，穿过隧道尽头的传送门。两人各核对尾王、大熊和野猪、根帽、长老萨满四项。若领到了双熊或袋子，再做对应支线。持有 98477 可先用吸引器。"),
@@ -373,8 +373,7 @@ function route.addShaper()
     route.addOozeField()
     append({
         route.along("shaper-uc", when(step("第二次经过环形山补取火羽山灰烬",
-            optional(collect(4502, 11829, "安戈洛灰烬", 9, 1, point(zone.crater, 50.7, 49.3),
-                "从火羽山的火元素拾取。收齐后下次经过棘齿城工坊时再交。"))),
+            route.craterAsh("从火羽山的火元素拾取。收齐后下次经过棘齿城工坊时再交。")),
             onQuest(4502), ready(4502, true))),
         fields(when(step("造物者平台 · 首次进本",
             entrance("The Shaper's Terrace", portal, 16985,
