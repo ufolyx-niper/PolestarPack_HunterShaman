@@ -3,7 +3,7 @@ local pack = "hunter-shaman-hyjal"
 local title = "猎萨双人 · 50–60"
 if not Polestar.RegisterPack({
     addon = addon, id = pack, title = title, author = "Codex",
-    version = "0.3.4", format = 11, license = "Private use",
+    version = "0.3.5", format = 11, license = "Private use",
     source = "WoW Forever and Polestar 0.4.1. See README.txt.",
 }) then return end
 
@@ -333,6 +333,14 @@ end
 
 local function inWinterspring(C, name)
     return isPlace(C, name, "Winterspring", 618)
+end
+
+-- Field samples count raw bag items; completion belongs to the tested samples.
+local function needsRawSamples(inZone, questId, testedItem)
+    return function(C, name)
+        return inZone(C, name) and C.IsOnQuest(questId) and not C.IsQuestCompleted(questId)
+            and not C.IsQuestReadyForTurnIn(questId) and (C.GetItemCount(testedItem) or 0) < 5
+    end
 end
 
 local function ashAvailable(C, name)
@@ -671,10 +679,10 @@ append({
     along("crater-turnins", step("路过火羽山时找林戈、拾火山灰",
         optional(turnin(4492, npc(9999, "林戈", zone.crater, 51.92, 49.91), "在山腰洞里。")),
         route.craterAsh())),
-    along("crater-turnins", when(step("安戈洛西侧收原始软泥样本",
+    along("crater-turnins", step("安戈洛西侧收原始软泥样本",
         watchGoal(optional(collect(nil, 12235, "安戈洛软泥怪样本", 25, nil, point(zone.crater, 36.1, 65.5),
-            "从软泥怪身上拾取原始样本，可多带一些。下次到幽暗城再用弗雷的绿色试验器检验。")), inCrater)),
-        onQuest(4294), ready(4294, true))),
+            "25 份是建议备料量。去幽暗城用弗雷的绿色试验器检验，收够 5 份纯净样本就可交。")),
+            needsRawSamples(inCrater, 4294, 12236)))),
     step("西南扫骨头、双帆龙和营地物资",
         collect(3882, 11114, "恐龙骨头", 8, 1, point(zone.crater, 46.09, 68.5), "在地上拾取，避开精英剑龙。"),
         collect(4503, 11830, "精细的双帆龙鳞片", 8, 1, point(zone.crater, 46.74, 69.94)),
@@ -981,10 +989,10 @@ append({
         kill(5155, 7115, "加德纳尔精兵", 6, 3, jaedenar),
         kill(5155, 7112, "加德纳尔教徒", 6, 4, jaedenar)),
     step("交加德纳尔并续接取水", turnin(5155, greta), accept(5157, greta)),
-    along("timbermaw", when(step("费伍德沿途收原始软泥样本",
+    along("timbermaw", step("费伍德沿途收原始软泥样本",
         watchGoal(optional(collect(nil, 12230, "费伍德软泥怪样本", 25, nil, jaedenar,
-            "加德纳尔入口的被污染软泥怪与碧火废墟的被诅咒软泥怪都可拾原始样本。到幽暗城用弗雷的红色试验器检验。")), inFelwood)),
-        onQuest(4293), ready(4293, true))),
+            "在加德纳尔入口或碧火废墟拾原样。25 份是建议备料量。去幽暗城用弗雷的红色试验器检验，收够 5 份被腐化的样本就可交。")),
+            needsRawSamples(inFelwood, 4293, 12234)))),
     step("在加德纳尔腐化月亮井装水",
         fields(questGoal("use", 5157, point(zone.felwood, 35.2, 59.8)),
             {item = 12922, itemName = "空水壶", oi = 1, note = "在加德纳尔的月亮井边使用任务空壶。"}),
