@@ -3,7 +3,7 @@ local pack = "hunter-shaman-hyjal"
 local title = "猎萨双人 · 50–60"
 if not Polestar.RegisterPack({
     addon = addon, id = pack, title = title, author = "Codex",
-    version = "0.3.5", format = 11, license = "Private use",
+    version = "0.3.6", format = 11, license = "Private use",
     source = "WoW Forever and Polestar 0.4.1. See README.txt.",
 }) then return end
 

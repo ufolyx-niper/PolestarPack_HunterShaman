@@ -121,3 +121,6 @@ The walks into the guides' steps (Legs.lua in the race parts) were routed on
 Leffe's navigation maps, used with Leffe's permission given to Polestar's author.
 Credit: Leffe's navigation maps.
 
+
+本次任务进度、前置与位置核对参考 Polestar v0.4.2.1 正式包及其任务数据库。
+https://github.com/fitzforge/polestar/releases/tag/v0.4.2.1

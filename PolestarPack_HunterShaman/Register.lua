@@ -36,8 +36,48 @@ if not Polestar.RegisterGuide({
 }) then return end
 -- The old city predicates latched numeric step flags before the visit.
 -- Native explicit Along skips use goal keys, and the step order is unchanged.
+-- Translate goal positions only for the exact step keys shipped before this release.
+local versions = {["0.3.2"]=true, ["0.3.3"]=true, ["0.3.4"]=true, ["0.3.5"]=true}
+-- Each mixed step gained two goals. In the seed step, the old fourth goal
+-- covered all three wrecks; an explicit check on it covers all three now.
+local edits = {
+    [3415617216] = {key=1675818646, first=4, split=true},
+    [4196232677] = {key=1141849001, first=10},
+}
+local function migrateObjectives(state, id)
+    local keys = state.stepKeys and state.stepKeys[id]
+    if type(keys) ~= "table" or not versions[state.shapeVersions and state.shapeVersions[id]] then return end
+    for step, oldKey in ipairs(keys) do
+        local edit = edits[oldKey]
+        if edit then
+            for _, field in ipairs({"manual", "skipped"}) do
+                local data = state[field] and state[field][id]
+                if type(data) == "table" then
+                    local moved = {}
+                    for key, value in pairs(data) do
+                        local i, j
+                        if type(key) == "string" then i, j = key:match("^(%d+):(%d+)$") end
+                        j = tonumber(j)
+                        if tonumber(i) == step and j >= edit.first then
+                            data[key] = nil
+                            moved[step..":"..(j+2)] = value
+                            if edit.split and j == edit.first then
+                                moved[key] = value
+                                moved[step..":"..(j+1)] = value
+                            end
+                        end
+                    end
+                    for key, value in pairs(moved) do data[key] = value end
+                end
+            end
+            keys[step] = edit.key
+        end
+    end
+end
+
 Polestar.OnInit(function()
     local state = Polestar.CharState()
+    migrateObjectives(state, guideId)
     local versions = state.shapeVersions
     local previous = versions and versions[guideId]
     if previous ~= "0.3.2" and previous ~= "0.3.3" then return end

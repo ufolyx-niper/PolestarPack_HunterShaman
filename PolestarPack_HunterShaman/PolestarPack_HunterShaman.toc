@@ -2,7 +2,7 @@
 ## Title: Polestar: Hunter and Shaman 50-60
 ## Title-zhCN: Polestar 猎萨双人 · 50–60
 ## Notes-zhCN: Forever 部落双人路线，涵盖海加尔邮差任务与四个副本的首趟准备。
-## Version: 0.3.5
+## Version: 0.3.6
 ## Author: Codex
 ## Dependencies: Polestar
 ## X-Polestar-Pack: hunter-shaman-hyjal

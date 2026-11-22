@@ -1,5 +1,5 @@
 Polestar 猎萨双人 · 50–60
-版本 0.3.5，适用 WoW Forever（16001）和 Polestar 0.4.1／0.4.1.1。
+版本 0.3.6，适用 WoW Forever（16001）和 Polestar 0.4.1 或更新版本。
 
 安装
 将压缩包解压到 _forever_/Interface/AddOns，使 PolestarPack_HunterShaman 和 Polestar 并列。两台电脑使用同一版本，安装后 /reload，或在角色选择界面启用。
